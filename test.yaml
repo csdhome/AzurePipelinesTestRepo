@@ -1,1 +1,51 @@
+resources:
+- repo: self
+
+jobs:
+
+- job: Job_1
+  displayName: Agent job
+  condition: succeeded()
+  pool:
+    vmImage: Hosted VS2017
+    demands: DotNetFramework
+
+  steps:
+  - task: AmazonWebServices.aws-vsts-tools.S3Download.S3Download@1
+    displayName: 'S3 Download: cpcsa-dev-devops-pipeline-scripts'
+    inputs:
+      awsCredentials: 'AWS Dev devops user'
+      regionName: 'us-west-2'
+      bucketName: 'cpcsa-dev-devops-pipeline-scripts'
+      globExpressions: 'start-agent.ps1'
+      targetFolder: 'c:\'
+
+  - task: AmazonWebServices.aws-vsts-tools.AWSPowerShellModuleScript.AWSPowerShellModuleScript@1
+    displayName: 'AWS Tools for Windows PowerShell Script: '
+    inputs:
+      awsCredentials: 'AWS Dev devops user'
+      regionName: 'us-west-2'
+      arguments: '-DevOpsAgentName "my-test-agent-from-devops-01"'
+      filePath: 'c:\start-agent.ps1'
+
+
+- job: Phase_1
+  displayName: Agent job 1
+  dependsOn: Job_1
+  condition: succeeded()
+  pool:
+    name: testpool
+    demands: Agent.Name -equals test-container-agent-02
+
+  steps:
+  - task: UniversalPackages@0
+    displayName: 'Universal publish'
+    inputs:
+      command: publish
+      vstsFeed: 'e023d109-a0ba-48bd-b311-28beec25b9d8'
+      vstsFeedPackage: 'azure-pipelines-test-repo'
+      vstsFeedPublish: 'e023d109-a0ba-48bd-b311-28beec25b9d8'
+      vstsFeedPackagePublish: 'azure-pipelines-test-repo'
+      packagePublishDescription: 'AzurePipelinesTestRepo package'
+
 
